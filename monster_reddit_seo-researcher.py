@@ -59,31 +59,35 @@ def get_best_subreddits(target_website):
     """
 
     try:
-        response = openai.ChatCompletion.create(
+        client = openai.OpenAI()  
+
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[{"role": "system", "content": "You are a Reddit SEO research assistant."},
                       {"role": "user", "content": prompt}],
             max_tokens=50
         )
-        
-        subreddits = response["choices"][0]["message"]["content"].strip().split("\n")
+
+        #  Correct OpenAI response parsing
+        subreddits = response.choices[0].message.content.strip().split("\n")
         return [s.replace("r/", "").strip() for s in subreddits if s]
 
     except Exception as e:
         print(f"❌ OpenAI API request failed: {e}")
         return []
 
+#  Get best subreddits
 subreddits = get_best_subreddits(target_website)
 
 if not subreddits:
     print("⚠️ No subreddits were identified. Exiting script.")
     exit(1)
 
-# ✅ Store subreddits in Google Sheets
+#  Store subreddits in Google Sheets
 worksheet = spreadsheet.add_worksheet(title="Identified Subreddits", rows="10", cols="3")
 worksheet.append_row(["Subreddit", "Why It's Relevant", "Estimated Popularity"])
 
 for sub in subreddits:
     worksheet.append_row([sub, "Suggested by OpenAI", "High"])
 
-print(f"✅ OpenAI identified the best subreddits: {subreddits}")
+print(f" OpenAI identified the best subreddits: {subreddits}")
