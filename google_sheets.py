@@ -18,6 +18,26 @@ import gspread
 from gspread.exceptions import APIError
 import time
 
+def authenticate_google_sheets():
+    """Authenticates with Google Sheets using a service account."""
+    try:
+        from google.oauth2.service_account import Credentials
+        import os
+        import json
+
+        # ✅ Load credentials from environment variable
+        service_account_info = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
+        creds = Credentials.from_service_account_info(json.loads(service_account_info), scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ])
+
+        return gspread.authorize(creds)
+
+    except Exception as e:
+        print(f"❌ Google Sheets authentication failed: {e}")
+        exit(1)
+
 def add_industry_tab(spreadsheet, industry_summary):
     """Creates a new tab in Google Sheets with business profile information."""
     try:
@@ -33,7 +53,7 @@ def add_industry_tab(spreadsheet, industry_summary):
             ["Top 3 Competitors", "Extracting..."]
         ]
 
-        # ✅ Use `batch_update()` instead of multiple `append_row()` calls
+        # ✅ Use batch_update() instead of multiple API calls
         industry_worksheet.batch_update([{"range": f"A{idx+1}:B{idx+1}", "values": [row]} for idx, row in enumerate(data)])
 
         print("✅ Industry Analysis tab added to Google Sheets.")
