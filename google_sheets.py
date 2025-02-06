@@ -1,3 +1,19 @@
+# ===============================================
+# 📌 How It Works - Google Sheets Integration
+# ===============================================
+# This module handles authentication and data writing to Google Sheets.
+#
+# 🚀 Key Functions:
+# 1️⃣ authenticate_google_sheets()  → Authenticates using a service account.
+# 2️⃣ add_industry_tab(spreadsheet, industry_summary)  → Creates a new tab with business profile data.
+# 3️⃣ add_subreddit_tab(spreadsheet, subreddits)  → Creates a new tab with the top 3 relevant subreddits.
+#
+# 🛠️ Optimizations:
+# ✅ Uses batch_update() to reduce API calls & avoid quota limits.
+# ✅ Automatically retries on quota errors (APIError 429).
+# ✅ Ensures all data is structured and written efficiently.
+# ===============================================
+
 import gspread
 from gspread.exceptions import APIError
 import time
