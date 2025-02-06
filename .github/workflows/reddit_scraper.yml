@@ -19,7 +19,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
+          pip install --upgrade pip
+          pip install --upgrade openai praw gspread requests pandas google-auth google-auth-oauthlib google-auth-httplib2
 
       - name: Verify Target Website
         run: |
