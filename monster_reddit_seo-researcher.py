@@ -20,28 +20,35 @@ target_website = sys.argv[1]  # ✅ Correct way to pass the target website from 
 print(f"🔍 Processing SEO research for: {target_website}")
 
 
-# --- Authenticate with Google Sheets ---
+import os
+import json
+import gspread
+from google.oauth2.service_account import Credentials
+
+# --- Authenticate with Google Sheets Using a Service Account ---
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
 def authenticate_google_sheets():
-    """Authenticate with Google Sheets using OAuth 2.0."""
-    creds = None
-    token_data = os.getenv("GOOGLE_SHEETS_TOKEN")
-    
-    if token_data:
-        creds = Credentials.from_authorized_user_info(eval(token_data), SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            print("❌ Google Sheets authentication failed.")
+    """Authenticate with Google Sheets using a Service Account."""
+    try:
+        service_account_info = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
+        if not service_account_info:
+            print("❌ Error: GOOGLE_SHEETS_CREDENTIALS is missing from environment variables.")
             exit(1)
-    
-    return gspread.authorize(creds)
 
+        # Load service account credentials from GitHub Secrets
+        creds = Credentials.from_service_account_info(json.loads(service_account_info), scopes=SCOPES)
+
+        return gspread.authorize(creds)
+
+    except Exception as e:
+        print(f"❌ Google Sheets authentication failed: {e}")
+        exit(1)
+
+# Initialize Google Sheets Client
 client = authenticate_google_sheets()
 spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
+
 
 # --- OpenAI API Setup ---
 openai.api_key = os.getenv("OPENAI_API_KEY")
