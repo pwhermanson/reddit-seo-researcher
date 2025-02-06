@@ -97,6 +97,11 @@ def analyze_with_openai(scraped_text, spreadsheet):
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150
         )
+         print("✅ OpenAI Analysis for Business Profile Complete.")
+    except Exception as e:
+        print(f"❌ Error: OpenAI could not analyze business profile for target website.")
+        exit(1)
+
 
     
        def extract_industry_details(industry_summary):
@@ -144,50 +149,22 @@ def add_subreddit_tab_to_sheets(spreadsheet, subreddits):
     try:
         subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="1")
         subreddit_worksheet.append_row(["Top 3 Subreddits"])
+        
         for subreddit in subreddits:
             subreddit_worksheet.append_row([subreddit])
+
         print("✅ Subreddit recommendations added to Google Sheets.")
+    
     except Exception as e:
-        print(f"❌
+        print(f"❌ Failed to add Subreddit Analysis tab: {e}")
 
-# The section above is not complete --
-
-
-
-        # Request subreddit recommendations
-        subreddit_prompt = f"""
-        Given the following business profile:
-        
-        {industry_summary}
-        
-        Identify the 3 most relevant subreddits where the target audience actively discusses related topics.
-        Return only a list of subreddit names without explanations.
-        """
-        subreddit_response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": subreddit_prompt}],
-            max_tokens=50
-        )
-        
-        subreddits = [
-    s.strip().replace("r/", "").replace("-", "").strip()
-    for s in subreddit_response.choices[0].message.content.strip().split("\n")
-    if "r/" in s
-]
-
-        add_subreddit_tab_to_sheets(spreadsheet, subreddits)
-        
-        return industry_summary
-
-    except Exception as e:
-        print(f"❌ OpenAI API request failed: {e}")
-        return ""
+        exit(1)
 
 
 def analyze_with_openai(scraped_text, spreadsheet):
     """Sends extracted website text to OpenAI API for analysis and stores results."""
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    
+
     prompt = f"""
     Based on the following website content, determine the industry, main products or services, and the target audience:
     
@@ -195,7 +172,7 @@ def analyze_with_openai(scraped_text, spreadsheet):
     
     Provide a summary of the industry, business focus, and key details in 3-5 sentences.
     """
-    
+
     try:
         client = openai.OpenAI()
         response = client.chat.completions.create(
@@ -206,7 +183,66 @@ def analyze_with_openai(scraped_text, spreadsheet):
         
         industry_summary = response.choices[0].message.content.strip()
         print(f"✅ OpenAI Industry Analysis:\n{industry_summary}")
+
+        # ✅ Store in Google Sheets
         add_industry_tab_to_sheets(spreadsheet, industry_summary)
+
+        # ✅ Request subreddit recommendations
+        subreddit_prompt = f"""
+        Given the following business profile:
+        
+        {industry_summary}
+        
+        Identify the 3 most relevant subreddits where the target audience actively discusses related topics.
+        Return only a list of subreddit names without explanations.
+        """
+
+        subreddit_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": subreddit_prompt}],
+            max_tokens=50
+        )
+
+        subreddits = [
+            s.strip().replace("r/", "").replace("-", "").strip()
+            for s in subreddit_response.choices[0].message.content.strip().split("\n")
+            if "r/" in s
+        ]
+
+        # ✅ Store in Google Sheets
+        add_subreddit_tab_to_sheets(spreadsheet, subreddits)
+
+        return industry_summary
+
+    except Exception as e:
+        print(f"❌ OpenAI API request failed: {e}")
+        return ""
+
+
+        
+        
+        def add_industry_tab_to_sheets(spreadsheet, industry_summary):
+    """Creates a new tab in Google Sheets with business profile information."""
+    try:
+        structured_details = extract_industry_details(industry_summary)
+
+        # ✅ Create new tab
+        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="10", cols="2")
+        industry_worksheet.append_row(["Category", "Details"])
+
+        # ✅ Store structured details
+        for detail in structured_details:
+            if ":" in detail:
+                category, value = detail.split(":", 1)
+                industry_worksheet.append_row([category.strip(), value.strip()])
+            else:
+                industry_worksheet.append_row([detail.strip(), ""])
+
+        print("✅ Industry Analysis tab added to Google Sheets.")
+    
+    except Exception as e:
+        print(f"❌ Failed to add Industry Analysis tab: {e}")
+
 
         # Request subreddit recommendations
         subreddit_prompt = f"""
