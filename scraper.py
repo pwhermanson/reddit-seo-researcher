@@ -1,22 +1,36 @@
 import requests
 from bs4 import BeautifulSoup
-import time
+from urllib.parse import urljoin
 
-def get_navigation_links(target_website):
-    """Extracts the main navigation links from the target website homepage."""
+def get_navigation_links(target_website, max_links_per_menu=10):
+    """Extracts main navigation links from the target website."""
     try:
-        response = requests.get(target_website, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        print(f"🔍 Crawling {target_website} to extract key navigation links...")
+        response = requests.get(target_website, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
+        # ✅ Find all navigation elements (common classes used for nav menus)
+        possible_nav_selectors = ["nav", "header", ".menu", ".navigation", ".nav"]
         nav_links = set()
-        for nav in soup.find_all("nav"):
-            for link in nav.find_all("a", href=True):
-                full_url = requests.compat.urljoin(target_website, link["href"])
-                if target_website in full_url and full_url not in nav_links:
-                    nav_links.add(full_url)
 
-        return list(nav_links)
+        for selector in possible_nav_selectors:
+            for nav in soup.select(selector):
+                for link in nav.find_all("a", href=True):
+                    full_url = urljoin(target_website, link["href"])
+                    if target_website in full_url:  # ✅ Keep only internal links
+                        nav_links.add(full_url)
+
+        # ✅ Limit the number of links per menu section
+        nav_links = list(nav_links)[:max_links_per_menu]
+
+        if not nav_links:
+            print("⚠️ No navigation links found. Analyzing homepage only.")
+            return []
+
+        print(f"✅ Extracted {len(nav_links)} navigation links.")
+        return nav_links
+
     except requests.RequestException as e:
         print(f"❌ Failed to fetch navigation links: {e}")
         return []
