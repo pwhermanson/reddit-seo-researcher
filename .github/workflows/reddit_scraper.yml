@@ -38,6 +38,5 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           KEYWORDINSIGHTS_API_KEY: ${{ secrets.KEYWORDINSIGHTS_API_KEY }}
-          GOOGLE_SHEETS_TOKEN: ${{ secrets.GOOGLE_SHEETS_TOKEN }}
-          TARGET_WEBSITE: ${{ github.event.client_payload.target_website }}
-        run: python monster_reddit_seo-researcher.py "$TARGET_WEBSITE"
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+        run: python monster_reddit_seo-researcher.py "${{ github.event.client_payload.target_website }}"
