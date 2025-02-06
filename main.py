@@ -11,16 +11,39 @@
 # │── requirements.txt  # ✅ List of required Python packages
 # ===============================================
 
+import re
 import scraper
 import openai_analysis
 import google_sheets
+import sys
 
-# ✅ Get Target Website
-target_website = "https://example.com"  # Replace with actual website
+# ✅ Get Target Website from GitHub Actions Input
+if len(sys.argv) < 2:
+    print("❌ Error: No target website provided.")
+    exit(1)
+
+target_website = sys.argv[1]  
+
+# ✅ Remove 'https://' or 'http://' from the target website
+clean_target_website = re.sub(r"https?://", "", target_website)
 
 # ✅ Authenticate Google Sheets
 client = google_sheets.authenticate_google_sheets()
-spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
+
+# ✅ Debugging: List available spreadsheets
+print("🔍 Available Google Sheets:")
+for sheet in client.openall():
+    print(f"- {sheet.title}")
+
+# ✅ Attempt to open the correct spreadsheet
+spreadsheet_name = f"Reddit SEO Research | {clean_target_website}"
+try:
+    spreadsheet = client.open(spreadsheet_name)
+    print(f"✅ Successfully opened: {spreadsheet_name}")
+except gspread.exceptions.SpreadsheetNotFound:
+    print(f"❌ Error: Google Sheet '{spreadsheet_name}' not found.")
+    print("📌 Ensure the sheet exists and the service account has Editor access.")
+    exit(1)
 
 # ✅ Scrape Website
 scraped_text = scraper.scrape_target_website(target_website)
@@ -36,3 +59,4 @@ subreddits = openai_analysis.get_relevant_subreddits(industry_summary)
 google_sheets.add_subreddit_tab(spreadsheet, subreddits)
 
 print("✅ Process completed successfully!")
+
