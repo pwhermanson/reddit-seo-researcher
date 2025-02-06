@@ -1,2 +1,19 @@
-beautifulsoup4
-requests
+# ===============================================
+# Project Structure - reddit-seo-researcher/
+# │── main.py  # ✅ Parent script that calls all modules
+# │── scraper.py  # ✅ Website scraping functions
+# │── openai_analysis.py  # ✅ OpenAI API interactions
+# │── google_sheets.py  # ✅ Google Sheets authentication & writing functions
+# │── utils.py  # ✅ Helper functions (like text formatting)
+# │── requirements.txt  # ✅ List of required Python packages (NEW FILE)
+# ===============================================
+
+beautifulsoup4  # ✅ For web scraping
+requests  # ✅ For making HTTP requests
+praw  # ✅ For Reddit API
+gspread  # ✅ For Google Sheets API
+openai  # ✅ For OpenAI API calls
+pandas  # ✅ For data handling
+google-auth  # ✅ For Google authentication
+google-auth-oauthlib  # ✅ For Google OAuth authentication
+google-auth-httplib2  # ✅ For handling HTTP requests with Google Auth
