@@ -53,12 +53,12 @@ except gspread.exceptions.SpreadsheetNotFound:
     exit(1)
 
 # ✅ Scrape Website
-scraped_text = scraper.scrape_target_website(target_website)
+scraped_text, analyzed_pages = scraper.scrape_target_website(target_website)
 
 # ✅ Analyze with OpenAI
 industry_summary = openai_analysis.analyze_with_openai(scraped_text)
 
-# ✅ Store in Google Sheets
+# ✅ Store in Google Sheets (Pass both industry_summary & analyzed_pages)
 google_sheets.add_industry_tab(spreadsheet, industry_summary, analyzed_pages)
 
 # ✅ Fetch Relevant Subreddits
