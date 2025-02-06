@@ -33,7 +33,7 @@ jobs:
           python-version: "3.9"
 
       - name: Install Dependencies
-        run: pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
+        run: pip install -r requirements.txt
 
       - name: Verify Target Website
         run: |
