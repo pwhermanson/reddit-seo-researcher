@@ -24,11 +24,13 @@ def authenticate_google_sheets():
     try:
         service_account_info = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
         if not service_account_info:
-            print("❌ Error: GOOGLE_SHEETS_CREDENTIALS is missing from environment variables.")
+            print("❌ GOOGLE_SHEETS_CREDENTIALS is missing from environment variables.")
             exit(1)
 
-        # Load service account credentials from GitHub Secrets
-        creds = Credentials.from_service_account_info(json.loads(service_account_info), scopes=SCOPES)
+        creds = Credentials.from_service_account_info(json.loads(service_account_info), scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ])
         return gspread.authorize(creds)
 
     except Exception as e:
@@ -95,18 +97,45 @@ def analyze_with_openai(scraped_text, spreadsheet):
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150
         )
-        
-        def add_industry_tab_to_sheets(spreadsheet, industry_summary):
-    """Creates a new tab in Google Sheets with business profile information."""
-    try:
-        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="10", cols="2")
-        industry_worksheet.append_row(["Category", "Details"])
-        industry_worksheet.append_row(["Industry & Niche", industry_summary])
-        industry_worksheet.append_row(["Main Products/Services", "Extracting..."])
-        industry_worksheet.append_row(["Target Audience", "Extracting..."])
-        industry_worksheet.append_row(["Audience Segments", "Extracting..."])
-        industry_worksheet.append_row(["Top 3 Competitors", "Extracting..."])
-        print("✅ Industry Analysis tab added to Google Sheets.")
+
+    
+       def extract_industry_details(industry_summary):
+    """Extracts structured industry details from OpenAI's response."""
+    prompt = f"""
+    The following is a business profile summary:
+    {industry_summary}
+
+    Extract structured details:
+    - Industry & Niche:
+    - Main Products/Services:
+    - Target Audience:
+    - Audience Segments:
+    - Top 3 Competitors:
+    
+    Return each category in a separate line.
+    """
+
+    response = openai.OpenAI().chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=200
+    )
+
+    details = response.choices[0].message.content.strip().split("\n")
+    return details
+
+# ✅ Extract structured details 
+structured_details = extract_industry_details(industry_summary)
+
+# ✅ Store in Google Sheets (This section is not complete)
+industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="10", cols="2")
+industry_worksheet.append_row(["Category", "Details"])
+for detail in structured_details:
+    category, value = detail.split(":", 1)
+    industry_worksheet.append_row([category.strip(), value.strip()])
+
+print("✅ Industry Analysis tab added to Google Sheets.")
+ 
     except Exception as e:
         print(f"❌ Failed to add Industry Analysis tab: {e}")
 
@@ -121,7 +150,7 @@ def add_subreddit_tab_to_sheets(spreadsheet, subreddits):
     except Exception as e:
         print(f"❌
 
-# The section above is not complete
+# The section above is not complete --
 
 
 
@@ -140,7 +169,12 @@ def add_subreddit_tab_to_sheets(spreadsheet, subreddits):
             max_tokens=50
         )
         
-        subreddits = subreddit_response.choices[0].message.content.strip().split("\n")
+        subreddits = [
+    s.strip().replace("r/", "").replace("-", "").strip()
+    for s in subreddit_response.choices[0].message.content.strip().split("\n")
+    if "r/" in s
+]
+
         add_subreddit_tab_to_sheets(spreadsheet, subreddits)
         
         return industry_summary
