@@ -74,26 +74,25 @@ def extract_text_from_url(url):
         print(f"❌ Failed to extract text from {url}: {e}")
         return ""
 
-def scrape_target_website(target_website, max_pages=10):
-    """Scrapes the homepage and main navigation pages for content."""
+def scrape_target_website(target_website):
+    """Scrapes the target website's homepage and key navigation pages."""
     print(f"🔍 Crawling {target_website} to extract key information...")
 
-    # ✅ Get main navigation links
-    nav_links = get_navigation_links(target_website, max_links_per_menu=max_pages)
-
-    # ✅ Always include the homepage in the scrape
-    pages_to_scrape = [target_website] + nav_links
+    nav_links = get_navigation_links(target_website)
+    if not nav_links:
+        print("⚠️ No navigation links found. Analyzing homepage only.")
+        nav_links = [target_website]
 
     scraped_text = ""
-    for idx, page_url in enumerate(pages_to_scrape):
-        if idx >= max_pages:  # ✅ Limit the number of pages scraped
-            break
+    analyzed_pages = []  # ✅ Track which pages were scraped
 
-        print(f"📄 Scraping: {page_url}")
-        text = extract_text_from_url(page_url)
+    for link in nav_links[:10]:  # ✅ Limit to 10 pages for efficiency
+        print(f"📄 Scraping: {link}")
+        text = extract_text_from_url(link)
         if text:
-            scraped_text += f"📄 {page_url}\n{text}\n\n"
+            scraped_text += text + "\n\n"
+            analyzed_pages.append(link)  # ✅ Store analyzed page
 
-        time.sleep(2)  # ✅ Prevent aggressive crawling
+        time.sleep(2)  # ✅ Prevent overloading the server
 
-    return scraped_text
+    return scraped_text, analyzed_pages
