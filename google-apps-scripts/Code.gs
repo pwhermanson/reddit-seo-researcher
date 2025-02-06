@@ -1,12 +1,16 @@
 // ===============================================
-// How It Works
-// 1️⃣ User enters a target website into cell B1 in Google Sheets.
-// 2️⃣ Script detects the change and prompts the user to confirm the operation.
-// 3️⃣ If confirmed, the script sends a request to GitHub Actions to trigger `main.py`.
-// 4️⃣ GitHub Actions runs the Reddit SEO Researcher script with the provided target website.
-// 5️⃣ The script fetches Reddit questions, cleans them, clusters them using KeywordInsights API, and updates Google Sheets.
-// 6️⃣ The script logs GitHub response or errors for debugging.
+// 📌 How It Works - Google Apps Script
 // ===============================================
+// 1️⃣ User enters a target website into cell B1 in Google Sheets.
+// 2️⃣ Script detects the change and prevents duplicate triggers for the same website.
+// 3️⃣ Automatically grants "Editor" access to the Reddit scraper service account.
+// 4️⃣ Prompts the user to confirm before starting the process.
+// 5️⃣ If confirmed, the script sends a request to GitHub Actions to trigger `main.py`.
+// 6️⃣ GitHub Actions runs the Reddit SEO Researcher script with the provided target website.
+// 7️⃣ The script scrapes the website, analyzes the data with OpenAI, and updates Google Sheets.
+// 8️⃣ The script logs GitHub response or errors for debugging.
+// ===============================================
+
 
 function customOnEdit(e) {
   if (!e || !e.range) {
@@ -21,7 +25,7 @@ function customOnEdit(e) {
     var targetWebsite = e.range.getValue();
     if (!targetWebsite) return;
 
-    // ✅ Prevent multiple prompts by using script properties
+    // ✅ Prevent multiple triggers for the same site
     var scriptProperties = PropertiesService.getScriptProperties();
     var lastTriggered = scriptProperties.getProperty("LAST_TRIGGERED_SITE");
 
@@ -31,6 +35,9 @@ function customOnEdit(e) {
     }
 
     scriptProperties.setProperty("LAST_TRIGGERED_SITE", targetWebsite);
+
+    // ✅ NEW: Automatically share the spreadsheet with the service account
+    shareSpreadsheetWithServiceAccount();
 
     // ✅ Show confirmation prompt only once
     var ui = SpreadsheetApp.getUi();
@@ -46,6 +53,7 @@ function customOnEdit(e) {
     triggerGitHubActions(targetWebsite);
   }
 }
+
 
 
 function triggerGitHubActions(targetWebsite) {
