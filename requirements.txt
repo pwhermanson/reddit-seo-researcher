@@ -17,3 +17,5 @@ pandas  # ✅ For data handling
 google-auth  # ✅ For Google authentication
 google-auth-oauthlib  # ✅ For Google OAuth authentication
 google-auth-httplib2  # ✅ For handling HTTP requests with Google Auth
+google-api-python-client # ✅ googleapiclient is part of the google-api-python-client
+
