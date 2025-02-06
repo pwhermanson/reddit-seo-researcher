@@ -9,20 +9,30 @@
 // ===============================================
 
 function customOnEdit(e) {
-  // ✅ Handle manual execution (e will be undefined)
   if (!e || !e.range) {
     Logger.log("⚠️ Script manually executed. No edit detected.");
     return;
   }
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  
-  // ✅ Detect changes in B1 (Target Website input)
+
+  // ✅ Ensure the edit was in B1 and only runs once per change
   if (e.range.getA1Notation() === "B1") {
     var targetWebsite = e.range.getValue();
     if (!targetWebsite) return;
 
-    // ✅ Show confirmation prompt before triggering GitHub Actions
+    // ✅ Prevent multiple prompts by using script properties
+    var scriptProperties = PropertiesService.getScriptProperties();
+    var lastTriggered = scriptProperties.getProperty("LAST_TRIGGERED_SITE");
+
+    if (lastTriggered === targetWebsite) {
+      Logger.log("⚠️ Duplicate trigger prevented.");
+      return;
+    }
+
+    scriptProperties.setProperty("LAST_TRIGGERED_SITE", targetWebsite);
+
+    // ✅ Show confirmation prompt only once
     var ui = SpreadsheetApp.getUi();
     var response = ui.alert("Confirm Operation", 
                             "Would you like to start the app for " + targetWebsite + "?", 
@@ -36,6 +46,7 @@ function customOnEdit(e) {
     triggerGitHubActions(targetWebsite);
   }
 }
+
 
 function triggerGitHubActions(targetWebsite) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
