@@ -18,7 +18,17 @@ jobs:
           python-version: "3.9"
 
       - name: Install Dependencies
-        run: pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
+        run: |
+          pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
+
+      - name: Verify Target Website
+        run: |
+          if [[ -z "${{ github.event.client_payload.target_website }}" ]]; then
+            echo "❌ No target website provided. Exiting."
+            exit 1
+          else
+            echo "🔍 Processing SEO research for: ${{ github.event.client_payload.target_website }}"
+          fi
 
       - name: Run Scraper
         env:
@@ -29,4 +39,5 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           KEYWORDINSIGHTS_API_KEY: ${{ secrets.KEYWORDINSIGHTS_API_KEY }}
           GOOGLE_SHEETS_TOKEN: ${{ secrets.GOOGLE_SHEETS_TOKEN }}
-        run: python monster_reddit_seo-researcher.py "${{ github.event.client_payload.target_website }}"
+          TARGET_WEBSITE: ${{ github.event.client_payload.target_website }}
+        run: python monster_reddit_seo-researcher.py "$TARGET_WEBSITE"
