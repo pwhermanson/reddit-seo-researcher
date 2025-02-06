@@ -42,10 +42,10 @@ import gspread
 from gspread.exceptions import APIError
 import time
 
-def add_industry_tab(spreadsheet, industry_summary):
+def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
     """Creates a new tab in Google Sheets with structured business profile information."""
     try:
-        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="10", cols="2")
+        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="15", cols="2")
 
         # ✅ Extract individual sections from OpenAI response
         lines = industry_summary.split("\n")
@@ -54,7 +54,8 @@ def add_industry_tab(spreadsheet, industry_summary):
             "Main Products/Services": "",
             "Target Audience": "",
             "Audience Segments": "",
-            "Top 3 Competitors": ""
+            "Top 3 Competitors": "",
+            "Key Themes from Website": "",
         }
 
         current_section = None
@@ -71,6 +72,8 @@ def add_industry_tab(spreadsheet, industry_summary):
                 current_section = "Audience Segments"
             elif line.startswith("**Top 3 Competitors:**"):
                 current_section = "Top 3 Competitors"
+            elif line.startswith("**Key Themes from Website:**"):
+                current_section = "Key Themes from Website"
             elif current_section and line:
                 structured_data[current_section] += line + "\n"
 
@@ -81,7 +84,9 @@ def add_industry_tab(spreadsheet, industry_summary):
             ["Main Products/Services", structured_data["Main Products/Services"].strip()],
             ["Target Audience", structured_data["Target Audience"].strip()],
             ["Audience Segments", structured_data["Audience Segments"].strip()],
-            ["Top 3 Competitors", structured_data["Top 3 Competitors"].strip()]
+            ["Top 3 Competitors", structured_data["Top 3 Competitors"].strip()],
+            ["Primary Website Pages Analyzed", "\n".join(analyzed_pages)],  # ✅ Store pages analyzed
+            ["Key Themes from Website", structured_data["Key Themes from Website"].strip()]
         ]
 
         # ✅ Use batch_update() for optimized writing
@@ -92,9 +97,10 @@ def add_industry_tab(spreadsheet, industry_summary):
         if "Quota exceeded" in str(e):
             print("⏳ Quota exceeded. Retrying in 30 seconds...")
             time.sleep(30)
-            add_industry_tab(spreadsheet, industry_summary)
+            add_industry_tab(spreadsheet, industry_summary, analyzed_pages)
         else:
             print(f"❌ Failed to add Industry Analysis tab: {e}")
+
 
 
 def add_subreddit_tab(spreadsheet, subreddits):
