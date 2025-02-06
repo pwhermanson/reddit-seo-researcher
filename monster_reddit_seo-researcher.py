@@ -54,11 +54,14 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def get_best_subreddits(target_website):
     """Use OpenAI to analyze the target website and find the best 3 subreddits."""
     prompt = f"""
-    You are an expert at finding the best Reddit communities for different businesses. 
-    Given the target website: {target_website}, analyze its industry, target audience, and business purpose.
-    Suggest the 3 most relevant subreddits where potential customers or industry professionals actively engage.
-    Return only a list of the 3 subreddit names without explanations.
+    You are an SEO expert with deep knowledge of Reddit communities.
+    Analyze the target website: {target_website}.
+    Step 1️⃣: Determine its primary industry and target audience.
+    Step 2️⃣: Identify the top 3 most relevant subreddits where potential customers are actively discussing related topics.
+    Step 3️⃣: Consider subreddit popularity, activity level, and alignment with the target website’s products or services.
+    Step 4️⃣: Return only the subreddit names in a plain list format (one per line), with no extra text or numbers.
     """
+
 
     try:
         client = openai.OpenAI()  # ✅ Create an OpenAI client instance
@@ -74,7 +77,8 @@ def get_best_subreddits(target_website):
         raw_response = response.choices[0].message.content.strip()
         print(f"🔍 Raw OpenAI Response:\n{raw_response}")  # ✅ Debugging output
 
-        subreddits = raw_response.split("\n")
+        subreddits = [s.strip().replace("r/", "").replace("-", "").strip() for s in raw_response.split("\n") if s.startswith("r/")]
+
         print(f"✅ Extracted Subreddits: {subreddits}")  # ✅ Confirm subreddits before storing
 
         return [s.replace("r/", "").strip() for s in subreddits if s]
