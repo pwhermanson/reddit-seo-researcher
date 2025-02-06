@@ -35,7 +35,7 @@ def authenticate_google_sheets():
         print(f"❌ Google Sheets authentication failed: {e}")
         exit(1)
 
-# ✅ Initialize Google Sheets Client
+# ✅ Initialize Google Sheets Client ---
 client = authenticate_google_sheets()
 try:
     spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
@@ -44,58 +44,160 @@ except gspread.exceptions.SpreadsheetNotFound:
     print("📌 Make sure the sheet exists and the service account has Editor access.")
     exit(1)
 
+# --- Scrape Target Website ---
+def scrape_target_website(target_website):
+    """Scrapes the target website's homepage and navigation pages."""
+    print(f"🔍 Crawling {target_website} to extract key information...")
+
+    nav_links = get_navigation_links(target_website)
+    if not nav_links:
+        print("⚠️ No navigation links found. Analyzing homepage only.")
+        nav_links = [target_website]
+
+    scraped_text = ""
+    for link in nav_links[:5]:  # Limit to first 5 navigation links
+        print(f"📄 Scraping: {link}")
+        text = extract_text_from_url(link)
+        if text:
+            scraped_text += text + "\n\n"
+        time.sleep(2)  # Add delay to prevent server overload
+
+    return scraped_text
+
 # --- OpenAI API Setup ---
+# ✅ Scrape website first
+scraped_text = scrape_target_website(target_website)
+
+# ✅ Then analyze the scraped text using OpenAI
+industry_info = analyze_with_openai(scraped_text, spreadsheet)
+
+# --- Initialize OpenAI API ---
 import openai
 import os
 
-# Ensure your OpenAI API key is set in your environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-def get_best_subreddits(target_website):
-    """Use OpenAI to analyze the target website and find the best 3 subreddits."""
+# OpenAI Analysis
+def analyze_with_openai(scraped_text, spreadsheet):
+    """Sends extracted website text to OpenAI API for analysis and stores results."""
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
     prompt = f"""
-    You are an SEO expert with deep knowledge of Reddit communities.
-    Analyze the target website: {target_website}.
-    Step 1️⃣: Determine its primary industry and target audience.
-    Step 2️⃣: Identify the top 3 most relevant subreddits where potential customers are actively discussing related topics.
-    Step 3️⃣: Consider subreddit popularity, activity level, and alignment with the target website’s products or services.
-    Step 4️⃣: Return only the subreddit names in a plain list format (one per line), with no extra text or numbers.
+    Based on the following website content, determine the industry, main products or services, and the target audience:
+    
+    {scraped_text}
+    
+    Provide a summary of the industry, business focus, and key details in 3-5 sentences.
     """
-
-
+    
     try:
-        client = openai.OpenAI()  # ✅ Create an OpenAI client instance
-
+        client = openai.OpenAI()
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150
+        )
+        
+        def add_industry_tab_to_sheets(spreadsheet, industry_summary):
+    """Creates a new tab in Google Sheets with business profile information."""
+    try:
+        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="10", cols="2")
+        industry_worksheet.append_row(["Category", "Details"])
+        industry_worksheet.append_row(["Industry & Niche", industry_summary])
+        industry_worksheet.append_row(["Main Products/Services", "Extracting..."])
+        industry_worksheet.append_row(["Target Audience", "Extracting..."])
+        industry_worksheet.append_row(["Audience Segments", "Extracting..."])
+        industry_worksheet.append_row(["Top 3 Competitors", "Extracting..."])
+        print("✅ Industry Analysis tab added to Google Sheets.")
+    except Exception as e:
+        print(f"❌ Failed to add Industry Analysis tab: {e}")
+
+def add_subreddit_tab_to_sheets(spreadsheet, subreddits):
+    """Creates a new tab in Google Sheets with subreddit recommendations."""
+    try:
+        subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="1")
+        subreddit_worksheet.append_row(["Top 3 Subreddits"])
+        for subreddit in subreddits:
+            subreddit_worksheet.append_row([subreddit])
+        print("✅ Subreddit recommendations added to Google Sheets.")
+    except Exception as e:
+        print(f"❌
+
+# The section above is not complete
+
+
+
+        # Request subreddit recommendations
+        subreddit_prompt = f"""
+        Given the following business profile:
+        
+        {industry_summary}
+        
+        Identify the 3 most relevant subreddits where the target audience actively discusses related topics.
+        Return only a list of subreddit names without explanations.
+        """
+        subreddit_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": subreddit_prompt}],
             max_tokens=50
         )
-
-        raw_response = response.choices[0].message.content.strip()
-        print(f"🔍 Raw OpenAI Response:\n{raw_response}")  # ✅ Debugging output
-
-        subreddits = [s.strip().replace("r/", "").replace("-", "").strip() for s in raw_response.split("\n") if s.startswith("r/")]
-
-        print(f"✅ Extracted Subreddits: {subreddits}")  # ✅ Confirm subreddits before storing
-
-        return [s.replace("r/", "").strip() for s in subreddits if s]
+        
+        subreddits = subreddit_response.choices[0].message.content.strip().split("\n")
+        add_subreddit_tab_to_sheets(spreadsheet, subreddits)
+        
+        return industry_summary
 
     except Exception as e:
         print(f"❌ OpenAI API request failed: {e}")
-        return []
+        return ""
 
-# Example usage
-target_website = "example.com"
-subreddits = get_best_subreddits(target_website)
 
-if not subreddits:
-    print("⚠️ No subreddits were identified. Exiting script.")
-    exit(1)
+def analyze_with_openai(scraped_text, spreadsheet):
+    """Sends extracted website text to OpenAI API for analysis and stores results."""
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
+    prompt = f"""
+    Based on the following website content, determine the industry, main products or services, and the target audience:
+    
+    {scraped_text}
+    
+    Provide a summary of the industry, business focus, and key details in 3-5 sentences.
+    """
+    
+    try:
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150
+        )
+        
+        industry_summary = response.choices[0].message.content.strip()
+        print(f"✅ OpenAI Industry Analysis:\n{industry_summary}")
+        add_industry_tab_to_sheets(spreadsheet, industry_summary)
 
-print(f"✅ OpenAI identified the best subreddits: {subreddits}")
+        # Request subreddit recommendations
+        subreddit_prompt = f"""
+        Given the following business profile:
+        
+        {industry_summary}
+        
+        Identify the 3 most relevant subreddits where the target audience actively discusses related topics.
+        Return only a list of subreddit names without explanations.
+        """
+        subreddit_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": subreddit_prompt}],
+            max_tokens=50
+        )
+        
+        subreddits = subreddit_response.choices[0].message.content.strip().split("\n")
+        add_subreddit_tab_to_sheets(spreadsheet, subreddits)
+        
+        return industry_summary
+
+    except Exception as e:
+        print(f"❌ OpenAI API request failed: {e}")
+        return ""
+
 
 # ✅ Store subreddits in Google Sheets
 worksheet = spreadsheet.add_worksheet(title="Identified Subreddits", rows="10", cols="3")
