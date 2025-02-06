@@ -4,13 +4,77 @@ import gspread
 import openai
 import requests
 import pandas as pd
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 
-# --- Initialize APIs ---
-openai.api_key = os.getenv("OPENAI_API_KEY")  # OpenAI API Key
-keywordinsights_api_key = os.getenv("KEYWORDINSIGHTS_API_KEY")  # Store in GitHub Secrets
+# --- Get Target Website from Input ---
+target_website = os.getenv("TARGET_WEBSITE")
 
-# --- Reddit API Initialization ---
+if not target_website:
+    print("❌ Error: No target website provided.")
+    exit(1)
+
+print(f"🔍 Identifying subreddits for: {target_website}")
+
+# --- Authenticate with Google Sheets ---
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+
+def authenticate_google_sheets():
+    """Authenticate with Google Sheets using OAuth 2.0."""
+    creds = None
+    token_data = os.getenv("GOOGLE_SHEETS_TOKEN")
+    
+    if token_data:
+        creds = Credentials.from_authorized_user_info(eval(token_data), SCOPES)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            print("❌ Google Sheets authentication failed.")
+            exit(1)
+    
+    return gspread.authorize(creds)
+
+client = authenticate_google_sheets()
+spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
+
+# --- OpenAI API Setup ---
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# --- Step 1: Identify the Best 3 Subreddits (Using OpenAI) ---
+def get_best_subreddits(target_website):
+    """Use OpenAI to analyze the target website and find the best 3 subreddits."""
+    prompt = f"""
+    You are an expert at finding the best Reddit communities for different businesses. 
+    Given the target website: {target_website}, analyze its industry, target audience, and business purpose.
+    Suggest the 3 most relevant subreddits where potential customers or industry professionals actively engage.
+    Return only a list of the 3 subreddit names without explanations.
+    """
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4-turbo",
+        messages=[{"role": "system", "content": "You are a Reddit SEO research assistant."},
+                  {"role": "user", "content": prompt}],
+        max_tokens=50
+    )
+
+    subreddits = response["choices"][0]["message"]["content"].strip().split("\n")
+    return [s.replace("r/", "").strip() for s in subreddits if s]
+
+subreddits = get_best_subreddits(target_website)
+
+# Store subreddits in Google Sheets
+worksheet = spreadsheet.add_worksheet(title="Identified Subreddits", rows="10", cols="3")
+worksheet.append_row(["Subreddit", "Why It's Relevant", "Estimated Popularity"])
+
+for sub in subreddits:
+    worksheet.append_row([sub, "Suggested by OpenAI", "High"])
+
+print(f"✅ OpenAI identified the best subreddits: {subreddits}")
+
+# --- Step 2: Scrape Reddit Questions ---
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -19,23 +83,22 @@ reddit = praw.Reddit(
     password=os.getenv("REDDIT_PASSWORD")
 )
 
-# --- Authenticate with Google Sheets ---
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-credentials = ServiceAccountCredentials.from_json_keyfile_name("client_secret.json", SCOPES)
-client = gspread.authorize(credentials)
-spreadsheet = client.open("Reddit SEO Research")
-
-# --- Step 1: Scrape Reddit Questions ---
 def scrape_reddit_questions(subreddit_name, limit=10):
     """Scrape questions from Reddit."""
     subreddit = reddit.subreddit(subreddit_name)
-    questions = [post.title for post in subreddit.hot(limit=limit) if post.title.endswith("?")]
-    return questions
+    return [post.title for post in subreddit.hot(limit=limit) if post.title.endswith("?")]
 
-subreddits = ["marketing", "Entrepreneur", "SaaS"]
 all_questions = [q for sub in subreddits for q in scrape_reddit_questions(sub)]
 
-# --- Step 2: Clean Questions Using OpenAI ---
+# Save raw questions to Google Sheets
+worksheet = spreadsheet.add_worksheet(title="Raw Reddit Questions", rows="500", cols="1")
+worksheet.append_row(["Raw Reddit Questions"])
+for question in all_questions:
+    worksheet.append_row([question])
+
+print(f"✅ Scraped {len(all_questions)} questions from Reddit.")
+
+# --- Step 3: Clean Questions Using OpenAI ---
 def clean_questions_with_openai(questions):
     """Use OpenAI to clean and simplify Reddit questions."""
     cleaned_questions = []
@@ -51,71 +114,36 @@ def clean_questions_with_openai(questions):
 
 cleaned_questions = clean_questions_with_openai(all_questions)
 
-# --- Save Cleaned Data to Google Sheets ---
-worksheet = spreadsheet.worksheet("Cleaned Questions")
-worksheet.clear()
+# Save Cleaned Questions to Google Sheets
+worksheet = spreadsheet.add_worksheet(title="Cleaned Questions", rows="500", cols="2")
 worksheet.append_row(["Raw Reddit Questions", "Cleaned Questions"])
 for raw, cleaned in zip(all_questions, cleaned_questions):
     worksheet.append_row([raw, cleaned])
 
-print(f"Saved {len(cleaned_questions)} cleaned questions to Google Sheets!")
+print(f"✅ Cleaned {len(cleaned_questions)} questions.")
 
-# --- Step 3: Send Questions to KeywordInsights API ---
-def send_to_keywordinsights(questions):
-    """Send cleaned questions to KeywordInsights API for clustering."""
-    url = "https://api.keywordinsights.ai/cluster"
-    payload = {
-        "api_key": keywordinsights_api_key,
-        "questions": questions,
-        "language": "en",
-        "cluster_mode": "topical"  # Adjust as needed
-    }
-    response = requests.post(url, json=payload)
-    return response.json() if response.status_code == 200 else None
+# --- Step 4: Send Questions to KeywordInsights API ---
+print("🚀 Sending cleaned questions to KeywordInsights API for clustering...")
 
-cluster_data = send_to_keywordinsights(cleaned_questions)
+keywordinsights_api_key = os.getenv("KEYWORDINSIGHTS_API_KEY")
+url = "https://api.keywordinsights.ai/cluster"
+
+payload = {
+    "api_key": keywordinsights_api_key,
+    "questions": cleaned_questions,
+    "language": "en",
+    "cluster_mode": "topical"
+}
+
+response = requests.post(url, json=payload)
+cluster_data = response.json() if response.status_code == 200 else None
 
 if cluster_data:
-    # --- Step 4: Save KeywordInsights Data to Google Sheets ---
     def save_dataframe_to_sheets(df, sheet_name):
         """Save a pandas DataFrame to Google Sheets."""
-        sheet = spreadsheet.worksheet(sheet_name)
-        sheet.clear()
+        sheet = spreadsheet.add_worksheet(title=sheet_name, rows="500", cols="10")
         sheet.append_row(df.columns.tolist())  # Add headers
         for row in df.values.tolist():
             sheet.append_row(row)
 
-    # Convert response to DataFrames
-    df_cluster_rank = pd.DataFrame(cluster_data.get("Cluster, Rank", []))
-    df_pivot_table = pd.DataFrame(cluster_data.get("Pivot Table By Keyword", []))
-    df_topical_cluster = pd.DataFrame(cluster_data.get("Topical Cluster", []))
-    df_cluster_data = pd.DataFrame(cluster_data.get("Cluster Data", []))
-
-    # Save all tabs to Google Sheets
-    save_dataframe_to_sheets(df_cluster_rank, "Cluster, Rank")
-    save_dataframe_to_sheets(df_pivot_table, "Pivot Table By Keyword")
-    save_dataframe_to_sheets(df_topical_cluster, "Topical Cluster")
-    save_dataframe_to_sheets(df_cluster_data, "Cluster Data")
-
-    print("KeywordInsights data saved to Google Sheets!")
-
-# --- Step 5: Identify Top 10 Relevant Questions Using OpenAI ---
-def find_top_10_relevant_questions():
-    """Identify the 10 most relevant questions from clustered data."""
-    df = df_pivot_table  # Use pivot table for ranking
-    if df.empty:
-        return []
-    
-    top_10 = df.head(10)["Keyword"].tolist()  # Assuming "Keyword" column contains questions
-    return top_10
-
-top_10_questions = find_top_10_relevant_questions()
-
-# Save Top 10 Questions to Google Sheets
-worksheet = spreadsheet.worksheet("10 Relevant Questions")
-worksheet.clear()
-worksheet.append_row(["Most Relevant Questions"])
-for question in top_10_questions:
-    worksheet.append_row([question])
-
-print("Top 10 relevant questions saved to Google Sheets!")
+    df_cluster_rank = pd.DataFrame(cluster_data.get("
