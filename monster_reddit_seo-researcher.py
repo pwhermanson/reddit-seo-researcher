@@ -71,7 +71,12 @@ def get_best_subreddits(target_website):
             max_tokens=50
         )
 
-        subreddits = response.choices[0].message.content.strip().split("\n")
+        raw_response = response.choices[0].message.content.strip()
+        print(f"🔍 Raw OpenAI Response:\n{raw_response}")  # ✅ Debugging output
+
+        subreddits = raw_response.split("\n")
+        print(f"✅ Extracted Subreddits: {subreddits}")  # ✅ Confirm subreddits before storing
+
         return [s.replace("r/", "").strip() for s in subreddits if s]
 
     except Exception as e:
