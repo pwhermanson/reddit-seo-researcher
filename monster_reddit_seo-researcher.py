@@ -8,14 +8,17 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-# --- Get Target Website from Input ---
-target_website = os.getenv("TARGET_WEBSITE")
+import os
+import sys
 
-if not target_website:
+# --- Get Target Website from GitHub Actions Input ---
+if len(sys.argv) < 2:
     print("❌ Error: No target website provided.")
     exit(1)
 
-print(f"🔍 Identifying subreddits for: {target_website}")
+target_website = sys.argv[1]  # ✅ Correct way to pass the target website from GitHub Actions
+print(f"🔍 Processing SEO research for: {target_website}")
+
 
 # --- Authenticate with Google Sheets ---
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
