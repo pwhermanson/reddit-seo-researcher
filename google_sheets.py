@@ -98,17 +98,24 @@ def add_industry_tab(spreadsheet, industry_summary):
 
 
 def add_subreddit_tab(spreadsheet, subreddits):
-    """Creates a new tab in Google Sheets with subreddit recommendations."""
+    """Creates a new tab in Google Sheets with subreddit recommendations, properly formatted."""
     try:
-        subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="1")
+        subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="2")
 
-        # ✅ Prepare batch data
-        data = [["Top 3 Subreddits"]] + [[sub] for sub in subreddits]
+        # ✅ Prepare the header
+        data = [["Top 3 Subreddits", "URLs"]]
+
+        # ✅ Process each subreddit (Remove numbering, keep "r/", add URL)
+        for sub in subreddits:
+            cleaned_subreddit = sub.strip()
+            cleaned_subreddit = cleaned_subreddit.lstrip("1234567890.- ")  # ✅ Remove any leading numbers
+            subreddit_link = f"https://www.reddit.com/{cleaned_subreddit}"  # ✅ Construct full Reddit URL
+            data.append([cleaned_subreddit, subreddit_link])
 
         # ✅ Use batch_update() for optimized writing
-        subreddit_worksheet.batch_update([{"range": f"A{idx+1}", "values": [row]} for idx, row in enumerate(data)])
+        subreddit_worksheet.batch_update([{"range": f"A{idx+1}:B{idx+1}", "values": [row]} for idx, row in enumerate(data)])
 
-        print("✅ Subreddit recommendations added to Google Sheets.")
+        print("✅ Relevant Subreddits tab updated with proper formatting and links.")
     except APIError as e:
         if "Quota exceeded" in str(e):
             print("⏳ Quota exceeded. Retrying in 30 seconds...")
@@ -116,3 +123,4 @@ def add_subreddit_tab(spreadsheet, subreddits):
             add_subreddit_tab(spreadsheet, subreddits)
         else:
             print(f"❌ Failed to add Subreddit Analysis tab: {e}")
+
