@@ -96,30 +96,32 @@ function triggerGitHubActions(targetWebsite) {
   }
 }
 
-// --- Send Cleaned Questions to KeywordInsights API ---
-Logger.log("🚀 Sending cleaned questions to KeywordInsights API for clustering...");
+function triggerKeywordInsightsAPI(targetWebsite) {
+  // ✅ Ensure KeywordInsights API runs after GitHub Actions completes
+  Logger.log("🚀 Sending cleaned questions to KeywordInsights API for clustering...");
 
-var keywordInsightsApiUrl = "https://api.keywordinsights.ai/cluster";
-var keywordInsightsPayload = {
-  "event_type": "trigger_keyword_clustering",
-  "client_payload": {
-    "target_website": targetWebsite
+  var keywordInsightsApiUrl = "https://api.keywordinsights.ai/cluster";
+  var keywordInsightsPayload = {
+    "event_type": "trigger_keyword_clustering",
+    "client_payload": {
+      "target_website": targetWebsite
+    }
+  };
+
+  var keywordInsightsOptions = {
+    "method": "POST",
+    "headers": {
+        "Accept": "application/json",
+        "Authorization": "Bearer " + PropertiesService.getScriptProperties().getProperty("KEYWORDINSIGHTS_API_KEY")
+    },
+    "payload": JSON.stringify(keywordInsightsPayload)
+  };
+
+  try {
+    var kiResponse = UrlFetchApp.fetch(keywordInsightsApiUrl, keywordInsightsOptions);
+    var kiResponseText = kiResponse.getContentText();
+    Logger.log("✅ KeywordInsights API Response: " + kiResponseText);
+  } catch (error) {
+    Logger.log("❌ Error Triggering KeywordInsights API: " + error.toString());
   }
-};
-
-var keywordInsightsOptions = {
-  "method": "POST",
-  "headers": {
-      "Accept": "application/json",
-      "Authorization": "Bearer " + PropertiesService.getScriptProperties().getProperty("KEYWORDINSIGHTS_API_KEY")
-  },
-  "payload": JSON.stringify(keywordInsightsPayload)
-};
-
-try {
-  var kiResponse = UrlFetchApp.fetch(keywordInsightsApiUrl, keywordInsightsOptions);
-  var kiResponseText = kiResponse.getContentText();
-  Logger.log("✅ KeywordInsights API Response: " + kiResponseText);
-} catch (error) {
-  Logger.log("❌ Error Triggering KeywordInsights API: " + error.toString());
 }
