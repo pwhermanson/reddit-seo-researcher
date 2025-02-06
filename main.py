@@ -22,15 +22,22 @@ if len(sys.argv) < 2:
     print("❌ Error: No target website provided.")
     exit(1)
 
-target_website = sys.argv[1]  
+target_website = sys.argv[1].strip()
 
-# ✅ Remove 'https://' or 'http://' from the target website
+# ✅ Remove 'https://' or 'http://' for clean filename use
 clean_target_website = re.sub(r"https?://", "", target_website)
+
+# ✅ Ensure 'https://' is included for requests (scraping & API calls)
+if not target_website.startswith(("http://", "https://")):
+    target_website = f"https://{target_website}"
+
+print(f"🔍 Using cleaned filename: {clean_target_website}")
+print(f"🔍 Using full URL for requests: {target_website}")
 
 # ✅ Authenticate Google Sheets
 client = google_sheets.authenticate_google_sheets()
 
-# ✅ Debugging: List available spreadsheets
+# ✅ Debugging: List all available spreadsheets
 print("🔍 Available Google Sheets:")
 for sheet in client.openall():
     print(f"- {sheet.title}")
@@ -59,4 +66,5 @@ subreddits = openai_analysis.get_relevant_subreddits(industry_summary)
 google_sheets.add_subreddit_tab(spreadsheet, subreddits)
 
 print("✅ Process completed successfully!")
+
 
