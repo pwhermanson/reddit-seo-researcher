@@ -9,15 +9,15 @@
 // ===============================================
 
 function customOnEdit(e) {
-  // ✅ Ensure the event object exists and has a valid range
+  // ✅ Handle manual execution (e will be undefined)
   if (!e || !e.range) {
-    Logger.log("❌ Error: Event object 'e' is undefined or missing 'range'.");
+    Logger.log("⚠️ Script manually executed. No edit detected.");
     return;
   }
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   
-  // ✅ Detects changes to cell B1 (Target Website input)
+  // ✅ Detect changes in B1 (Target Website input)
   if (e.range.getA1Notation() === "B1") {
     var targetWebsite = e.range.getValue();
     if (!targetWebsite) return;
