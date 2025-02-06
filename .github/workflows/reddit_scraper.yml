@@ -1,9 +1,8 @@
 name: Run Reddit SEO Researcher
 
 on:
-  schedule:
-    - cron: "0 * * * *"  # Runs every hour
-  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger_reddit_scraper]
 
 jobs:
   scrape:
@@ -19,7 +18,7 @@ jobs:
           python-version: "3.9"
 
       - name: Install Dependencies
-        run: pip install praw gspread openai requests pandas oauth2client
+        run: pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
 
       - name: Run Scraper
         env:
@@ -29,4 +28,5 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           KEYWORDINSIGHTS_API_KEY: ${{ secrets.KEYWORDINSIGHTS_API_KEY }}
-        run: python monster_reddit_seo-researcher.py
+          GOOGLE_SHEETS_TOKEN: ${{ secrets.GOOGLE_SHEETS_TOKEN }}
+        run: python monster_reddit_seo-researcher.py "${{ github.event.client_payload.target_website }}"
