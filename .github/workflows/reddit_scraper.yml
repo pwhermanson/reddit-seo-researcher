@@ -1,3 +1,18 @@
+# ===============================================
+# How It Works
+# 1️⃣ Triggered by GitHub Actions
+#    - The workflow listens for an event trigger (repository_dispatch)
+#      with a payload containing the target website.
+# 2️⃣ Runs on an Ubuntu Machine
+#    - The workflow executes inside a virtual machine (runs-on: ubuntu-latest).
+# 3️⃣ Performs These Steps:
+#    ✅ Checks out the latest code from the repository.
+#    ✅ Sets up Python (version 3.9).
+#    ✅ Installs dependencies (praw, openai, gspread, requests, etc.).
+#    ✅ Verifies if a target website is provided (otherwise, it exits).
+#    ✅ Runs `main.py` with the target website as an argument.
+# ===============================================
+
 name: Run Reddit SEO Researcher
 
 on:
@@ -18,9 +33,7 @@ jobs:
           python-version: "3.9"
 
       - name: Install Dependencies
-        run: |
-          pip install --upgrade pip
-          pip install --upgrade openai praw gspread requests pandas google-auth google-auth-oauthlib google-auth-httplib2
+        run: pip install praw gspread openai requests pandas google-auth google-auth-oauthlib google-auth-httplib2
 
       - name: Verify Target Website
         run: |
