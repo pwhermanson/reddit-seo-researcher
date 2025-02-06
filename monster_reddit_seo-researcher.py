@@ -59,24 +59,17 @@ def get_best_subreddits(target_website):
     """
 
     try:
-        client = openai.OpenAI()  
+        client = openai.OpenAI()  # ✅ Initialize OpenAI client once
 
-        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="o3-mini",  # ✅ Use OpenAI's new reasoning model
+            reasoning_effort="medium",  # ✅ Can be "low", "medium", or "high"
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=200,  # ✅ Controls token usage (reasoning + completion)
+            store=True  # ✅ Enables OpenAI to store results (optional)
+        )
 
-    response = client.chat.completions.create(
-        model="o3-mini",  # ✅ Use OpenAI's new reasoning model
-        reasoning_effort="medium",  # ✅ Can be "low", "medium", or "high"
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        max_completion_tokens=200,  # ✅ Controls token usage (reasoning + completion)
-        store=True  # ✅ Enables OpenAI to store results (optional)
-)
-
-subreddits = response.choices[0].message.content.strip().split("\n")
-
-
-        #  Correct OpenAI response parsing
+        # ✅ Correct OpenAI response parsing
         subreddits = response.choices[0].message.content.strip().split("\n")
         return [s.replace("r/", "").strip() for s in subreddits if s]
 
@@ -84,18 +77,18 @@ subreddits = response.choices[0].message.content.strip().split("\n")
         print(f"❌ OpenAI API request failed: {e}")
         return []
 
-#  Get best subreddits
+# ✅ Get best subreddits
 subreddits = get_best_subreddits(target_website)
 
 if not subreddits:
     print("⚠️ No subreddits were identified. Exiting script.")
     exit(1)
 
-#  Store subreddits in Google Sheets
+# ✅ Store subreddits in Google Sheets
 worksheet = spreadsheet.add_worksheet(title="Identified Subreddits", rows="10", cols="3")
 worksheet.append_row(["Subreddit", "Why It's Relevant", "Estimated Popularity"])
 
 for sub in subreddits:
     worksheet.append_row([sub, "Suggested by OpenAI", "High"])
 
-print(f" OpenAI identified the best subreddits: {subreddits}")
+print(f"✅ OpenAI identified the best subreddits: {subreddits}")
