@@ -37,7 +37,13 @@ def authenticate_google_sheets():
 
 # ✅ Initialize Google Sheets Client
 client = authenticate_google_sheets()
-spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
+try:
+    spreadsheet = client.open(f"Reddit SEO Research | {target_website}")
+except gspread.exceptions.SpreadsheetNotFound:
+    print(f"❌ Error: Google Sheet 'Reddit SEO Research | {target_website}' not found.")
+    print("📌 Make sure the sheet exists and the service account has Editor access.")
+    exit(1)
+
 
 # --- OpenAI API Setup ---
 openai.api_key = os.getenv("OPENAI_API_KEY")
