@@ -88,4 +88,12 @@ if not subreddits:
 
 print(f"✅ OpenAI identified the best subreddits: {subreddits}")
 
+# ✅ Store subreddits in Google Sheets
+worksheet = spreadsheet.add_worksheet(title="Identified Subreddits", rows="10", cols="3")
+worksheet.append_row(["Subreddit", "Why It's Relevant", "Estimated Popularity"])
+
+for sub in subreddits:
+    worksheet.append_row([sub, "Suggested by OpenAI", "High"])
+
+print("✅ Subreddits successfully added to Google Sheets.")
 
