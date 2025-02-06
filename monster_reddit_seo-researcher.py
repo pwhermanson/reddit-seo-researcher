@@ -44,7 +44,6 @@ except gspread.exceptions.SpreadsheetNotFound:
     print("📌 Make sure the sheet exists and the service account has Editor access.")
     exit(1)
 
-
 # --- OpenAI API Setup ---
 import openai
 import os
@@ -62,7 +61,9 @@ def get_best_subreddits(target_website):
     """
 
     try:
-        response = openai.ChatCompletion.create(
+        client = openai.OpenAI()  # ✅ Create an OpenAI client instance
+
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "user", "content": prompt}
@@ -70,7 +71,7 @@ def get_best_subreddits(target_website):
             max_tokens=50
         )
 
-        subreddits = response.choices[0].message["content"].strip().split("\n")
+        subreddits = response.choices[0].message.content.strip().split("\n")
         return [s.replace("r/", "").strip() for s in subreddits if s]
 
     except Exception as e:
@@ -86,4 +87,5 @@ if not subreddits:
     exit(1)
 
 print(f"✅ OpenAI identified the best subreddits: {subreddits}")
+
 
