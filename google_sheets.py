@@ -42,10 +42,14 @@ import gspread
 from gspread.exceptions import APIError
 import time
 
+import time
+from googleapiclient.errors import HttpError  # ✅ Ensure proper API error handling
+
 def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
     """Creates a new tab in Google Sheets with structured business profile information."""
     try:
-        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="15", cols="2")
+        # ✅ Create a new worksheet for Industry Analysis
+        industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="20", cols="2")
 
         # ✅ Extract individual sections from OpenAI response
         lines = industry_summary.split("\n")
@@ -77,29 +81,34 @@ def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
             elif current_section and line:
                 structured_data[current_section] += line + "\n"
 
-        # ✅ Format the structured data properly
+        # ✅ Ensure extracted values are clean
+        structured_data = {k: v.strip() for k, v in structured_data.items()}
+
+        # ✅ Prepare data for batch insertion
         data = [
             ["Category", "Details"],
-            ["Industry & Niche", structured_data["Industry & Niche"].strip()],
-            ["Main Products/Services", structured_data["Main Products/Services"].strip()],
-            ["Target Audience", structured_data["Target Audience"].strip()],
-            ["Audience Segments", structured_data["Audience Segments"].strip()],
-            ["Top 3 Competitors", structured_data["Top 3 Competitors"].strip()],
-            ["Primary Website Pages Analyzed", "\n".join(analyzed_pages)],  # ✅ Store pages analyzed
-            ["Key Themes from Website", structured_data["Key Themes from Website"].strip()]
+            ["Industry & Niche", structured_data.get("Industry & Niche", "N/A")],
+            ["Main Products/Services", structured_data.get("Main Products/Services", "N/A")],
+            ["Target Audience", structured_data.get("Target Audience", "N/A")],
+            ["Audience Segments", structured_data.get("Audience Segments", "N/A")],
+            ["Top 3 Competitors", structured_data.get("Top 3 Competitors", "N/A")],
+            ["Primary Website Pages Analyzed", "\n".join(analyzed_pages) if analyzed_pages else "Homepage Only"],  # ✅ Store pages analyzed
+            ["Key Themes from Website", structured_data.get("Key Themes from Website", "N/A")]
         ]
 
         # ✅ Use batch_update() for optimized writing
         industry_worksheet.batch_update([{"range": f"A{idx+1}:B{idx+1}", "values": [row]} for idx, row in enumerate(data)])
 
         print("✅ Industry Analysis tab updated with structured formatting.")
-    except APIError as e:
+
+    except HttpError as e:
         if "Quota exceeded" in str(e):
             print("⏳ Quota exceeded. Retrying in 30 seconds...")
             time.sleep(30)
-            add_industry_tab(spreadsheet, industry_summary, analyzed_pages)
+            add_industry_tab(spreadsheet, industry_summary, analyzed_pages)  # ✅ Retry logic
         else:
             print(f"❌ Failed to add Industry Analysis tab: {e}")
+
 
 
 
