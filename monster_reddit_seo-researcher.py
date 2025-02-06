@@ -62,7 +62,7 @@ def get_best_subreddits(target_website):
         client = openai.OpenAI()  
 
         response = client.chat.completions.create(
-            model="03-mini",
+            model="o3-mini",
             messages=[{"role": "system", "content": "You are a Reddit SEO research assistant."},
                       {"role": "user", "content": prompt}],
             max_tokens=50
