@@ -61,12 +61,20 @@ def get_best_subreddits(target_website):
     try:
         client = openai.OpenAI()  
 
-        response = client.chat.completions.create(
-            model="o3-mini",
-            messages=[{"role": "system", "content": "You are a Reddit SEO research assistant."},
-                      {"role": "user", "content": prompt}],
-            max_tokens=50
-        )
+        client = openai.OpenAI()
+
+    response = client.chat.completions.create(
+        model="o3-mini",  # ✅ Use OpenAI's new reasoning model
+        reasoning_effort="medium",  # ✅ Can be "low", "medium", or "high"
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_completion_tokens=200,  # ✅ Controls token usage (reasoning + completion)
+        store=True  # ✅ Enables OpenAI to store results (optional)
+)
+
+subreddits = response.choices[0].message.content.strip().split("\n")
+
 
         #  Correct OpenAI response parsing
         subreddits = response.choices[0].message.content.strip().split("\n")
