@@ -68,8 +68,11 @@ def extract_industry_details(industry_summary):
             structured_data[current_section] += line + " "
 
     # ✅ Strip any trailing spaces and ensure empty fields are handled
-    for key in structured_data.keys():
-        structured_data[key] = structured_data[key].strip() or "❌ Missing Data"
+for key in structured_data.keys():
+    if "❌ Missing Data" in structured_data[key]:  
+        structured_data[key] = structured_data[key].replace("❌ Missing Data", "").strip()  
+    structured_data[key] = structured_data[key] if structured_data[key] else "❌ Missing Data"
+
 
     return structured_data
 
