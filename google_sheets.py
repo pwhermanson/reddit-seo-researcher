@@ -65,16 +65,16 @@ def extract_industry_details(industry_summary):
         elif re.search(r"\b(Key Themes from Website|Website Messaging|Brand Focus)\b", line, re.IGNORECASE):
             current_section = "Key Themes from Website"
         elif current_section and line:
-            structured_data[current_section] += line + " "
+            structured_data[current_section] += line + "\n"
 
-    return structured_data  
-
+  
     # ✅ Strip any trailing spaces and ensure empty fields are handled
-for key in structured_data.keys():
-    if "❌ Missing Data" in structured_data[key]:  
-        structured_data[key] = structured_data[key].replace("❌ Missing Data", "").strip()  
-    structured_data[key] = structured_data[key] if structured_data[key] else "❌ Missing Data"
+    for key in structured_data.keys():
+        if "❌ Missing Data" in structured_data[key]:  
+            structured_data[key] = structured_data[key].replace("❌ Missing Data", "").strip()  
+        structured_data[key] = structured_data[key] if structured_data[key] else "❌ Missing Data"
 
+    return structured_data  # ✅ Moved outside loop, correctly indented
 
 # ✅ Add Industry Tab
 def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
