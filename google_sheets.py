@@ -66,8 +66,11 @@ def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
 
         for line in lines:
             line = line.strip()
-            if line.startswith("**Industry & Niche:**"):
+            if "**Industry & Niche:**" in line:
                 current_section = "Industry & Niche"
+            elif current_section == "Industry & Niche" and line.strip():
+                structured_data["Industry & Niche"] += line.strip() + " "
+
             elif line.startswith("**Main Products/Services:**"):
                 current_section = "Main Products/Services"
             elif line.startswith("**Target Audience:**"):
@@ -80,6 +83,57 @@ def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
                 current_section = "Key Themes from Website"
             elif current_section and line:
                 structured_data[current_section] += line + "\n"
+
+        # ✅ Format structured data before writing to Sheets
+        data = [
+            ["Category", "Details"],
+            ["Industry & Niche", structured_data["Industry & Niche"].strip() or "❌ Missing Data"],
+            ["Main Products/Services", structured_data["Main Products/Services"].strip() or "❌ Missing Data"],
+            ["Target Audience", structured_data["Target Audience"].strip() or "❌ Missing Data"],
+            ["Audience Segments", structured_data["Audience Segments"].strip() or "❌ Missing Data"],
+            ["Top 3 Competitors", structured_data["Top 3 Competitors"].strip() or "❌ Missing Data"],
+            ["Primary Website Pages Analyzed", "\n".join(analyzed_pages) if analyzed_pages else "❌ No Pages Analyzed"],
+            ["Key Themes from Website", structured_data["Key Themes from Website"].strip() or "❌ Missing Data"]
+        ]
+
+        # ✅ Write data to Google Sheets in one batch
+        industry_worksheet.batch_update([{"range": f"A{idx+1}:B{idx+1}", "values": [row]} for idx, row in enumerate(data)])
+
+        print("✅ Industry Analysis tab updated with structured formatting.")
+    except Exception as e:
+        print(f"❌ Failed to add Industry Analysis tab: {e}")
+
+
+        current_section = None
+
+for line in lines:
+    line = line.strip()
+    
+    if "**Industry & Niche:**" in line:
+        current_section = "Industry & Niche"
+
+    elif current_section == "Industry & Niche" and line.strip():
+        structured_data["Industry & Niche"] += line.strip() + " "
+    
+    elif line.startswith("**Main Products/Services:**"):
+        current_section = "Main Products/Services"
+    
+    elif line.startswith("**Target Audience:**"):
+        current_section = "Target Audience"
+    
+    elif line.startswith("**Audience Segments:**"):
+        current_section = "Audience Segments"
+    
+    elif line.startswith("**Top 3 Competitors:**"):
+        current_section = "Top 3 Competitors"
+    
+    elif line.startswith("**Key Themes from Website:**"):
+        current_section = "Key Themes from Website"
+    
+    elif current_section and line:  # ✅ Append content for all sections
+        structured_data[current_section] += line + "\n"
+
+
 
         # ✅ Ensure extracted values are clean
         structured_data = {k: v.strip() for k, v in structured_data.items()}
