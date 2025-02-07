@@ -16,6 +16,7 @@ import scraper
 import openai_analysis
 import google_sheets
 import sys
+import gspread
 
 # ✅ Get Target Website from GitHub Actions Input
 if len(sys.argv) < 2:
@@ -43,7 +44,7 @@ for sheet in client.openall():
     print(f"- {sheet.title}")
 
 # ✅ Attempt to open the correct spreadsheet
-spreadsheet_name = f"Reddit SEO Research | {clean_target_website}"
+spreadsheet_name = f"Reddit SEO Research | {clean_target_website.replace('www.', '')}"
 try:
     spreadsheet = client.open(spreadsheet_name)
     print(f"✅ Successfully opened: {spreadsheet_name}")
@@ -57,14 +58,20 @@ scraped_text, analyzed_pages = scraper.scrape_target_website(target_website)
 
 # ✅ Analyze with OpenAI
 industry_summary = openai_analysis.analyze_with_openai(scraped_text)
+print("🔍 Extracted Industry Details:\n", industry_summary)
 
-# ✅ Store in Google Sheets (Pass both industry_summary & analyzed_pages)
-google_sheets.add_industry_tab(spreadsheet, industry_summary, analyzed_pages)
+# ✅ Extract structured details
+structured_details = google_sheets.extract_industry_details(industry_summary)
+print("✅ Structured Data Ready for Google Sheets:\n", structured_details)
+
+# ✅ Store in Google Sheets
+google_sheets.add_industry_tab(spreadsheet, structured_details, analyzed_pages)
 
 # ✅ Fetch Relevant Subreddits
 subreddits = openai_analysis.get_relevant_subreddits(industry_summary)
 google_sheets.add_subreddit_tab(spreadsheet, subreddits, industry_summary)
 
 print("✅ Process completed successfully!")
+
 
 
