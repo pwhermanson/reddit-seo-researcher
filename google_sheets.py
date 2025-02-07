@@ -115,27 +115,109 @@ def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
             print(f"❌ Failed to add Industry Analysis tab: {e}")
 
 # ✅ Add Subreddit Tab
-def add_subreddit_tab(spreadsheet, subreddits):
-    """Creates a new tab in Google Sheets with subreddit recommendations, formatted properly."""
+def add_subreddit_tab(spreadsheet, subreddits, industry_summary):
+    """Creates a new tab in Google Sheets with subreddit recommendations, formatted properly and validated by OpenAI."""
     try:
         if not spreadsheet:
             print("❌ No valid spreadsheet object. Skipping subreddit analysis.")
             return
 
-        subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="2")
-        subreddit_worksheet.append_row(["Subreddit", "URL"])  # ✅ Updated headers
+        # ✅ OpenAI Validation - Ensures only 3 relevant subreddits
+        validated_subreddits = validate_subreddits_with_openai(subreddits, industry_summary)
 
-        formatted_subreddits = [[sub, f"https://www.reddit.com/{sub}"] for sub in subreddits]
+        if len(validated_subreddits) < 3:
+            print("⚠️ OpenAI removed irrelevant subreddits. Fetching replacements...")
+            validated_subreddits = fetch_additional_subreddits(validated_subreddits, industry_summary)
 
-        # ✅ Batch update for performance
-        subreddit_worksheet.update("A2:B{}".format(len(formatted_subreddits) + 1), formatted_subreddits)
+        if not validated_subreddits or len(validated_subreddits) < 3:
+            print("❌ OpenAI failed to return 3 relevant subreddits. Exiting subreddit analysis.")
+            return
 
-        print("✅ Relevant Subreddits tab updated with proper formatting and links.")
+        # ✅ Create a new worksheet for subreddit analysis
+        subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="3")
+        subreddit_worksheet.append_row(["Subreddit", "URL", "Relevance Explanation"])  # ✅ Updated headers
+
+        # ✅ Format subreddits with proper links and explanations
+        formatted_subreddits = [[sub, f"https://www.reddit.com/{sub}", explanation] for sub, explanation in validated_subreddits]
+
+        # ✅ Batch update for efficiency
+        subreddit_worksheet.update("A2:C{}".format(len(formatted_subreddits) + 1), formatted_subreddits)
+
+        print("✅ Relevant Subreddits tab updated with proper formatting, links, and explanations.")
 
     except APIError as e:
         if "Quota exceeded" in str(e):
             print("⏳ Quota exceeded. Retrying in 30 seconds...")
             time.sleep(30)
-            return add_subreddit_tab(spreadsheet, subreddits)
+            return add_subreddit_tab(spreadsheet, subreddits, industry_summary)
         else:
             print(f"❌ Failed to add Subreddit Analysis tab: {e}")
+
+def validate_subreddits_with_openai(subreddits, industry_summary):
+    """Uses OpenAI to check subreddit relevance and provide explanations."""
+    validate_prompt = f"""
+    Given the target business profile:
+
+    {industry_summary}
+
+    And the following subreddit recommendations:
+
+    {", ".join([f"r/{s}" for s in subreddits])}
+
+    Check if each subreddit is highly relevant to the business profile. 
+    - Remove any subreddit that is not **directly related** to the business or target audience.
+    - If any subreddits are removed, replace them with **new, highly relevant subreddits** until exactly **3 strong recommendations** remain.
+    - For each subreddit, provide a **brief explanation** (2 sentences max) of why it is relevant.
+
+    Format the output like this:
+    r/SubredditName - Explanation
+    """
+
+    try:
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": validate_prompt}],
+            max_tokens=150
+        )
+        validated_subs = response.choices[0].message.content.strip().split("\n")
+        validated_subs = [sub.split(" - ") for sub in validated_subs if " - " in sub]
+
+        return [(sub[0].strip(), sub[1].strip()) for sub in validated_subs]
+    
+    except Exception as e:
+        print(f"❌ OpenAI API request failed during subreddit validation: {e}")
+        return []
+
+
+def fetch_additional_subreddits(existing_subreddits, industry_summary):
+    """Fetches additional subreddits if OpenAI removed irrelevant ones."""
+    prompt = f"""
+    Given the target business profile:
+
+    {industry_summary}
+
+    The following subreddits have already been verified as relevant:
+    {", ".join(existing_subreddits)}
+
+    Find **additional subreddits** that are **highly relevant** to this business until the total reaches 3.
+    Format the output like this:
+    r/SubredditName - Explanation
+    """
+
+    try:
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100
+        )
+        new_subs = response.choices[0].message.content.strip().split("\n")
+        new_subs = [sub.split(" - ") for sub in new_subs if " - " in sub]
+
+        return existing_subreddits + [(sub[0].strip(), sub[1].strip()) for sub in new_subs]
+    
+    except Exception as e:
+        print(f"❌ OpenAI API request failed while fetching additional subreddits: {e}")
+        return existing_subreddits
+
