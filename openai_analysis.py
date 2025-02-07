@@ -27,22 +27,36 @@ import os
 # ✅ Set OpenAI API Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def analyze_with_openai(scraped_text):
-    """Analyzes website content using OpenAI to extract business insights."""
-    
-    prompt = f"""
-    You are a business analyst. Analyze the following website content and provide a structured business profile:
+import openai
+import os
 
+def analyze_with_openai(scraped_text):
+    """Analyzes website content using OpenAI and enforces structured output format."""
+    
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    prompt = f"""
+    You are an expert business analyst and SEO strategist. Given the website content below, analyze the business and provide structured insights. 
+    
+    **INSTRUCTIONS:**
+    - Use the exact format below. Do not add extra explanations.
+    - Ensure each section contains clear, relevant, and structured information.
+    - If information is missing, return "Unknown" instead of leaving fields blank.
+    
     **Website Content:**
     {scraped_text}
-
-    **Output Format (Return EXACTLY this structure):**
-    **Industry & Niche:** [Industry summary]
-    **Main Products/Services:** [List of main products/services]
-    **Target Audience:** [Description of the target audience]
-    **Audience Segments:** [List of audience segments]
-    **Top 3 Competitors:** [Competitor names]
-    **Key Themes from Website:** [Major themes extracted from content]
+    
+    **OUTPUT FORMAT (USE EXACT LABELS, DO NOT MODIFY):**
+    **Industry & Niche:** [Provide the industry and niche]
+    **Main Products/Services:** 
+    - [List key products and services]
+    **Target Audience:** [Describe the ideal customers]
+    **Audience Segments:** 
+    - [List audience segments]
+    **Top 3 Competitors:** 
+    - [List three major competitors]
+    **Key Themes from Website:** 
+    - [Identify key website themes]
     """
 
     try:
@@ -54,18 +68,29 @@ def analyze_with_openai(scraped_text):
         )
 
         raw_response = response.choices[0].message.content.strip()
-        print("🔍 Raw OpenAI Response:\n", raw_response)  # ✅ Debugging
+        print("🔍 Raw OpenAI Response:\n", raw_response)  # ✅ Debugging output
 
-        return raw_response  # ✅ Return raw response for structured extraction
+        return raw_response  # ✅ Return structured response
 
     except Exception as e:
         print(f"❌ OpenAI API request failed: {e}")
         return """**Industry & Niche:** Unknown
-**Main Products/Services:** Unknown
+**Main Products/Services:** 
+- Unknown
 **Target Audience:** Unknown
-**Audience Segments:** Unknown
-**Top 3 Competitors:** Unknown
-**Key Themes from Website:** Unknown"""
+**Audience Segments:** 
+- Unknown
+**Top 3 Competitors:** 
+- Unknown
+**Key Themes from Website:** 
+- Unknown"""
+
+
+
+
+
+
+
 
 def get_relevant_subreddits(industry_summary):
     """Fetches the most relevant subreddits based on the business profile and validates them."""
