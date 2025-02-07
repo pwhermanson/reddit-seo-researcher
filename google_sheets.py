@@ -15,6 +15,8 @@
 # ===============================================
 
 import gspread
+import json  # ✅ Fix: Import missing json module
+import os
 from gspread.exceptions import APIError
 import time
 
@@ -26,11 +28,15 @@ def authenticate_google_sheets():
         return creds
     except Exception as e:
         print(f"❌ Google Sheets authentication failed: {e}")
-        return None
+        return None  # ✅ Prevents crashes if authentication fails
 
 def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
     """Creates a new tab in Google Sheets with structured business profile information."""
     try:
+        if not spreadsheet:
+            print("❌ No valid spreadsheet object. Skipping industry analysis.")
+            return
+
         # ✅ Create a new worksheet for Industry Analysis
         industry_worksheet = spreadsheet.add_worksheet(title="Industry Analysis", rows="20", cols="2")
 
@@ -97,6 +103,10 @@ def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
 def add_subreddit_tab(spreadsheet, subreddits):
     """Creates a new tab in Google Sheets with subreddit recommendations, formatted properly."""
     try:
+        if not spreadsheet:
+            print("❌ No valid spreadsheet object. Skipping subreddit analysis.")
+            return
+
         subreddit_worksheet = spreadsheet.add_worksheet(title="Relevant Subreddits", rows="10", cols="2")
         subreddit_worksheet.append_row(["Subreddit", "URL"])  # ✅ Updated headers
 
