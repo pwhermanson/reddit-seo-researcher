@@ -63,7 +63,7 @@ google_sheets.add_industry_tab(spreadsheet, industry_summary, analyzed_pages)
 
 # ✅ Fetch Relevant Subreddits
 subreddits = openai_analysis.get_relevant_subreddits(industry_summary)
-google_sheets.add_subreddit_tab(spreadsheet, subreddits)
+google_sheets.add_subreddit_tab(spreadsheet, subreddits, industry_summary)
 
 print("✅ Process completed successfully!")
 
