@@ -35,7 +35,8 @@ def authenticate_google_sheets():
 
 # ✅ Extract Industry Details (Improved)
 def extract_industry_details(industry_summary):
-    """Extracts structured business details from OpenAI response."""
+    """Extracts structured business details from OpenAI response with stricter label matching."""
+    
     structured_data = {
         "Industry & Niche": "❌ Missing Data",
         "Main Products/Services": "❌ Missing Data",
@@ -50,31 +51,36 @@ def extract_industry_details(industry_summary):
 
     for line in lines:
         line = line.strip()
-        
-        # ✅ Detect and assign each section properly
-        if re.search(r"\b(Industry & Niche|Industry Overview|Business Type)\b", line, re.IGNORECASE):
+
+        # ✅ Force strict matching of section headers (since OpenAI now follows exact labels)
+        if "**Industry & Niche:**" in line:
             current_section = "Industry & Niche"
-        elif re.search(r"\b(Main Products|Products & Services)\b", line, re.IGNORECASE):
+            structured_data[current_section] = ""  # Reset Missing Data placeholder
+        elif "**Main Products/Services:**" in line:
             current_section = "Main Products/Services"
-        elif re.search(r"\b(Target Audience|Ideal Customer|Target Market)\b", line, re.IGNORECASE):
+            structured_data[current_section] = ""
+        elif "**Target Audience:**" in line:
             current_section = "Target Audience"
-        elif re.search(r"\b(Audience Segments|User Groups)\b", line, re.IGNORECASE):
+            structured_data[current_section] = ""
+        elif "**Audience Segments:**" in line:
             current_section = "Audience Segments"
-        elif re.search(r"\b(Top 3 Competitors|Market Rivals|Competition)\b", line, re.IGNORECASE):
+            structured_data[current_section] = ""
+        elif "**Top 3 Competitors:**" in line:
             current_section = "Top 3 Competitors"
-        elif re.search(r"\b(Key Themes from Website|Website Messaging|Brand Focus)\b", line, re.IGNORECASE):
+            structured_data[current_section] = ""
+        elif "**Key Themes from Website:**" in line:
             current_section = "Key Themes from Website"
+            structured_data[current_section] = ""
         elif current_section and line:
-            structured_data[current_section] += line + "\n"
+            structured_data[current_section] += line + " "
 
-  
-    # ✅ Strip any trailing spaces and ensure empty fields are handled
+    # ✅ Remove trailing spaces and fix incorrectly placed "❌ Missing Data"
     for key in structured_data.keys():
-        if "❌ Missing Data" in structured_data[key]:  
-            structured_data[key] = structured_data[key].replace("❌ Missing Data", "").strip()  
-        structured_data[key] = structured_data[key] if structured_data[key] else "❌ Missing Data"
+        structured_data[key] = structured_data[key].strip()
+        if structured_data[key] in ["", "❌ Missing Data"]:
+            structured_data[key] = "❌ Missing Data"
 
-    return structured_data  # ✅ Moved outside loop, correctly indented
+    return structured_data
 
 # ✅ Add Industry Tab
 def add_industry_tab(spreadsheet, industry_summary, analyzed_pages):
