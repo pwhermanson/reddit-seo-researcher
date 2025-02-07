@@ -68,37 +68,78 @@ def analyze_with_openai(scraped_text):
 **Key Themes from Website:** Unknown"""
 
 def get_relevant_subreddits(industry_summary):
-    """Fetches the most relevant subreddits based on business profile."""
+    """Fetches the most relevant subreddits based on the business profile and validates them."""
     
-    prompt = f"""
+    # ✅ Step 1: Ask OpenAI for an initial list of subreddits
+    generate_prompt = f"""
     Given the following business profile:
 
     {industry_summary}
 
-    Identify the **3 most relevant subreddits** where the target audience actively discusses related topics.
-    
-    **Return the exact format below (one subreddit per line, no numbering or explanations):**
-    r/[Subreddit1]
-    r/[Subreddit2]
-    r/[Subreddit3]
+    Identify the 5 most relevant subreddits where the target audience actively discusses related topics.
+    Only return subreddit names in list format (e.g., r/Dentistry, r/DentalCare, etc.).
     """
 
     try:
         client = openai.OpenAI()
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=50
+            messages=[{"role": "user", "content": generate_prompt}],
+            max_tokens=100
         )
 
-        raw_response = response.choices[0].message.content.strip()
-        print("🔍 Raw OpenAI Subreddit Response:\n", raw_response)  # ✅ Debugging
-
-        subreddits = [s.strip() for s in raw_response.split("\n") if s.startswith("r/")]
-        
-        print("✅ Extracted Subreddits:", subreddits)  # ✅ Confirm correct subreddit extraction
-        return subreddits
+        # ✅ Extract subreddit list
+        subreddits = response.choices[0].message.content.strip().split("\n")
+        subreddits = [s.strip().replace("r/", "").strip() for s in subreddits if s]
 
     except Exception as e:
-        print(f"❌ OpenAI API request failed: {e}")
+        print(f"❌ OpenAI API request failed (Generating Subreddits): {e}")
         return []
+
+    # ✅ Step 2: Validate the Subreddits with OpenAI
+    validate_prompt = f"""
+    Given the target business profile:
+
+    {industry_summary}
+
+    And the following subreddit recommendations:
+
+    {", ".join([f"r/{s}" for s in subreddits])}
+
+    Check if each subreddit is highly relevant to the business profile. 
+    Remove any subreddit that is not **directly related** to the business or target audience.
+
+    Then, for each subreddit that remains, provide a **brief explanation** (2 sentences max) of why it is relevant.
+
+    Format the output like this:
+    r/SubredditName - Explanation
+    """
+
+    try:
+        validation_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": validate_prompt}],
+            max_tokens=250
+        )
+
+        # ✅ Extract validated subreddit responses
+        validated_subreddits = validation_response.choices[0].message.content.strip().split("\n")
+        validated_subreddits = [s.strip() for s in validated_subreddits if " - " in s]
+
+        # ✅ Separate subreddit names and explanations
+        final_subreddits = []
+        subreddit_explanations = {}
+
+        for entry in validated_subreddits:
+            parts = entry.split(" - ", 1)
+            if len(parts) == 2:
+                subreddit_name = parts[0].replace("r/", "").strip()
+                explanation = parts[1].strip()
+                final_subreddits.append(subreddit_name)
+                subreddit_explanations[subreddit_name] = explanation
+
+        return final_subreddits, subreddit_explanations
+
+    except Exception as e:
+        print(f"❌ OpenAI API request failed (Validating Subreddits): {e}")
+        return [], {}
