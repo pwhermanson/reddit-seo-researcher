@@ -19,6 +19,7 @@ import gspread
 import json  # ✅ Fix: Import missing json module
 import os
 import time
+import re  # ✅ Added for improved text extraction
 from gspread.exceptions import APIError
 
 # ✅ Google Sheets Authentication
@@ -32,16 +33,16 @@ def authenticate_google_sheets():
         print(f"❌ Google Sheets authentication failed: {e}")
         return None  # ✅ Prevents crashes if authentication fails
 
-# ✅ Extract Industry Details
+# ✅ Extract Industry Details (Improved)
 def extract_industry_details(industry_summary):
     """Extracts structured business details from OpenAI response."""
     structured_data = {
-        "Industry & Niche": "",
-        "Main Products/Services": "",
-        "Target Audience": "",
-        "Audience Segments": "",
-        "Top 3 Competitors": "",
-        "Key Themes from Website": "",
+        "Industry & Niche": "❌ Missing Data",
+        "Main Products/Services": "❌ Missing Data",
+        "Target Audience": "❌ Missing Data",
+        "Audience Segments": "❌ Missing Data",
+        "Top 3 Competitors": "❌ Missing Data",
+        "Key Themes from Website": "❌ Missing Data",
     }
 
     current_section = None
@@ -51,17 +52,17 @@ def extract_industry_details(industry_summary):
         line = line.strip()
         
         # ✅ Detect and assign each section properly
-        if line.startswith("**Industry & Niche:**"):
+        if re.search(r"\b(Industry & Niche|Industry Overview|Business Type)\b", line, re.IGNORECASE):
             current_section = "Industry & Niche"
-        elif line.startswith("**Main Products/Services:**"):
+        elif re.search(r"\b(Main Products|Products & Services)\b", line, re.IGNORECASE):
             current_section = "Main Products/Services"
-        elif line.startswith("**Target Audience:**"):
+        elif re.search(r"\b(Target Audience|Ideal Customer|Target Market)\b", line, re.IGNORECASE):
             current_section = "Target Audience"
-        elif line.startswith("**Audience Segments:**"):
+        elif re.search(r"\b(Audience Segments|User Groups)\b", line, re.IGNORECASE):
             current_section = "Audience Segments"
-        elif line.startswith("**Top 3 Competitors:**"):
+        elif re.search(r"\b(Top 3 Competitors|Market Rivals|Competition)\b", line, re.IGNORECASE):
             current_section = "Top 3 Competitors"
-        elif line.startswith("**Key Themes from Website:**"):
+        elif re.search(r"\b(Key Themes from Website|Website Messaging|Brand Focus)\b", line, re.IGNORECASE):
             current_section = "Key Themes from Website"
         elif current_section and line:
             structured_data[current_section] += line + " "
