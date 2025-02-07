@@ -98,22 +98,25 @@ def get_relevant_subreddits(industry_summary):
 
     # ✅ Step 2: Validate the Subreddits with OpenAI
     validate_prompt = f"""
-    Given the target business profile:
+Given the target business profile:
 
-    {industry_summary}
+{industry_summary}
 
-    And the following subreddit recommendations:
+And the following subreddit recommendations:
 
-    {", ".join([f"r/{s}" for s in subreddits])}
+{", ".join([f"r/{s}" for s in subreddits])}
 
-    Check if each subreddit is highly relevant to the business profile. 
-    Remove any subreddit that is not **directly related** to the business or target audience.
+Check if each subreddit is highly relevant to the business profile. 
+Remove any subreddit that is not **directly related** to the business or target audience.
 
-    Then, for each subreddit that remains, provide a **brief explanation** (2 sentences max) of why it is relevant.
+If any subreddits are removed, replace them with **new, highly relevant subreddits** until the final list contains exactly **3 strong recommendations**.
 
-    Format the output like this:
-    r/SubredditName - Explanation
-    """
+For each subreddit, provide a **brief explanation** (2 sentences max) of why it is relevant.
+
+Format the output like this:
+r/SubredditName - Explanation
+"""
+
 
     try:
         validation_response = client.chat.completions.create(
